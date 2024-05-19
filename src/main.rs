@@ -1,13 +1,25 @@
-use std::thread::sleep;
-use std::time::{Duration, Instant};
+use std::io;
+use std::time::Instant;
 
 fn main() {
+    println!("timer app");
     let mut timer = Timer::new();
-    timer.start();
-
-    sleep(Duration::new(2, 0));
-
-    println!("{} seconds elapsed", timer.stop());
+    let mut command = String::new();
+    loop {
+        command.clear();
+        io::stdin()
+            .read_line(&mut command)
+            .expect("Failed to read line");
+        match command.trim() {
+            "start" => timer.start(),
+            "stop" => {
+                let duration = timer.stop();
+                println!("{} seconds elapsed", duration);
+            }
+            "exit" => break,
+            _ => println!("unknown command: {}", command.as_str()),
+        }
+    }
 }
 
 struct Timer {
