@@ -1,5 +1,5 @@
 use std::io;
-use std::time::Instant;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 fn main() {
     println!("timer app");
@@ -72,14 +72,16 @@ impl Timer {
 
 #[derive(Debug)]
 struct Record {
-    duration: u64,
     task: String,
+    duration: u64,
+    timestamp: u64,
 }
 
 struct Recorder {
     timer: Timer,
     records: Vec<Record>,
     current_task: Option<String>,
+    current_ts: Option<u64>,
 }
 
 impl Recorder {
@@ -88,23 +90,39 @@ impl Recorder {
             timer: Timer::new(),
             records: Vec::new(),
             current_task: None,
+            current_ts: None,
         };
     }
 
     fn start_recording(&mut self, task: String) {
         self.timer.start();
         self.current_task = Some(task);
+        self.current_ts = Some(self.get_current_ts());
     }
 
     fn stop_recording(&mut self) {
         if let Some(task) = self.current_task.take() {
             let duration = self.timer.stop();
-            let record = Record { duration, task };
+            let timestamp = self.current_ts.unwrap();
+            let record = Record {
+                task,
+                duration,
+                timestamp,
+            };
             self.records.push(record);
         }
     }
 
     fn show_records(&self) {
         println!("{:?}", self.records);
+    }
+
+    fn get_current_ts(&self) -> u64 {
+        let ts = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .expect("failed to get timestamp from SystemTime")
+            .as_secs();
+
+        return ts;
     }
 }
