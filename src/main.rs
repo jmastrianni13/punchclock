@@ -1,7 +1,9 @@
+use csv::Writer;
+use serde::Serialize;
 use std::io;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime};
 
-fn main() {
+fn main() -> Result<(), io::Error> {
     println!("timer app");
     let mut recorder = Recorder::new();
     let mut command = String::new();
@@ -17,6 +19,7 @@ fn main() {
                 match c {
                     "stop" => recorder.stop_recording(),
                     "show" => recorder.show_records(),
+                    "persist" => persist(&recorder.records)?,
                     "exit" => break,
                     _ => println!("unknown command: {}", command.as_str()),
                 }
@@ -31,6 +34,22 @@ fn main() {
             _ => println!("unknown command: {}", command.as_str()),
         }
     }
+
+    return Ok(());
+}
+
+fn persist(records: &Vec<Record>) -> Result<(), io::Error> {
+    let mut writer = Writer::from_path("test.csv")?;
+
+    for record in records {
+        writer.serialize(record)?;
+    }
+
+    writer.flush()?;
+
+    println!("Records written to csv");
+
+    return Ok(());
 }
 
 struct Timer {
@@ -70,7 +89,7 @@ impl Timer {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct Record {
     task: String,
     duration: u64,
