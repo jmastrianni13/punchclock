@@ -42,7 +42,11 @@ fn main() -> Result<(), io::Error> {
 }
 
 fn persist(records: &Vec<Record>) -> Result<(), io::Error> {
-    let mut writer = Writer::from_path("test.csv")?;
+    let last_record = records
+        .last()
+        .expect("could not get last record, are there any records?"); // TODO fix panic
+    let fname = format!("s3s_hours_{}.csv", last_record.timestamp);
+    let mut writer = Writer::from_path(&fname)?;
 
     for record in records {
         writer.serialize(record)?;
@@ -50,7 +54,7 @@ fn persist(records: &Vec<Record>) -> Result<(), io::Error> {
 
     writer.flush()?;
 
-    println!("Records written to csv");
+    println!("Records written to {}", fname);
 
     return Ok(());
 }
