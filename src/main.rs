@@ -1,3 +1,4 @@
+use chrono::{TimeZone, Utc};
 use csv::Writer;
 use serde::Serialize;
 use std::io;
@@ -17,9 +18,11 @@ fn main() -> Result<(), io::Error> {
             command_parts if command_parts.len() == 1 => {
                 let c = command_parts[0];
                 match c {
+                    "clear" => recorder.clear(),
                     "stop" => recorder.stop_recording(),
                     "show" => recorder.show_records(),
                     "persist" => persist(&recorder.records)?,
+                    "total" => recorder.get_total(),
                     "exit" => break,
                     _ => println!("unknown command: {}", command.as_str()),
                 }
@@ -93,7 +96,7 @@ impl Timer {
 struct Record {
     task: String,
     duration: u64,
-    timestamp: u64,
+    timestamp: String,
 }
 
 struct Recorder {
@@ -113,6 +116,10 @@ impl Recorder {
         };
     }
 
+    fn clear(&mut self) {
+        self.records = Vec::new()
+    }
+
     fn start_recording(&mut self, task: String) {
         self.timer.start();
         self.current_task = Some(task);
@@ -122,18 +129,21 @@ impl Recorder {
     fn stop_recording(&mut self) {
         if let Some(task) = self.current_task.take() {
             let duration = self.timer.stop();
-            let timestamp = self.current_ts.unwrap();
-            let record = Record {
-                task,
-                duration,
-                timestamp,
-            };
-            self.records.push(record);
+            if let Some(seconds) = self.current_ts {
+                let timestamp = Utc.timestamp_opt(seconds as i64, 0).unwrap();
+                let timestamp = String::from(timestamp.format("%Y-%m-%d %H:%M:%S UTC").to_string());
+                let record = Record {
+                    task,
+                    duration,
+                    timestamp,
+                };
+                self.records.push(record);
+            }
         }
     }
 
     fn show_records(&self) {
-        println!("{:?}", self.records);
+        println!("{:#?}", self.records);
     }
 
     fn get_current_ts(&self) -> u64 {
@@ -143,5 +153,11 @@ impl Recorder {
             .as_secs();
 
         return ts;
+    }
+
+    fn get_total(&self) {
+        let total: f64 = self.records.iter().map(|r| r.duration as f64).sum();
+        println!("{} (hours)", total / 60.0 / 60.0);
+        return;
     }
 }
