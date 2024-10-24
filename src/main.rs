@@ -1,6 +1,7 @@
 use chrono::{TimeZone, Utc};
 use csv::Writer;
 use serde::Serialize;
+use std::fmt;
 use std::io;
 use std::time::{Instant, SystemTime};
 
@@ -96,11 +97,23 @@ impl Timer {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 struct Record {
     task: String,
     duration: u64,
     timestamp: String,
+}
+
+impl fmt::Debug for Record {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let duration_in_hours = self.duration as f64 / 3600.0;
+        return f
+            .debug_struct("Record")
+            .field("task", &self.task)
+            .field("duration (hours)", &duration_in_hours)
+            .field("timestamp", &self.timestamp)
+            .finish();
+    }
 }
 
 struct Recorder {
