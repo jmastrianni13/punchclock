@@ -46,7 +46,7 @@ fn persist(records: &Vec<Record>) -> Result<(), io::Error> {
     let last_record = records
         .last()
         .expect("could not get last record, are there any records?"); // TODO fix panic
-    let fname = format!("s3s_hours_{}.csv", last_record.timestamp);
+    let fname = format!("s3s_hours_{}.csv", last_record.formatted_ts());
     let mut writer = Writer::from_path(&fname)?;
 
     for record in records {
@@ -101,18 +101,27 @@ impl Timer {
 struct Record {
     task: String,
     duration: u64,
-    timestamp: String,
+    timestamp: u64,
 }
 
 impl fmt::Debug for Record {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let timestamp = self.formatted_ts();
         let duration_in_hours = self.duration as f64 / 3600.0;
         return f
             .debug_struct("Record")
             .field("task", &self.task)
             .field("duration (hours)", &duration_in_hours)
-            .field("timestamp", &self.timestamp)
+            .field("timestamp", &timestamp)
             .finish();
+    }
+}
+
+impl Record {
+    fn formatted_ts(&self) -> String {
+        let timestamp = Utc.timestamp_opt(self.timestamp as i64, 0).unwrap();
+        let timestamp = String::from(timestamp.format("%Y-%m-%d %H:%M:%S UTC").to_string());
+        return timestamp;
     }
 }
 
@@ -146,9 +155,7 @@ impl Recorder {
     fn stop_recording(&mut self) {
         if let Some(task) = self.current_task.take() {
             let duration = self.timer.stop();
-            if let Some(seconds) = self.current_ts {
-                let timestamp = Utc.timestamp_opt(seconds as i64, 0).unwrap();
-                let timestamp = String::from(timestamp.format("%Y-%m-%d %H:%M:%S UTC").to_string());
+            if let Some(timestamp) = self.current_ts {
                 let record = Record {
                     task,
                     duration,
